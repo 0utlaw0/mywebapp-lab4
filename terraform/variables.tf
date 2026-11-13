@@ -13,5 +13,5 @@ variable "ubuntu_image_url" {
 variable "network_cidr" {
   description = "Підмережа для віртуальних машин"
   type        = string
-  default     = "192.168.122.0/24"
+  default     = "192.168.133.0/24"
 }
