@@ -1,0 +1,47 @@
+---
+- name: Встановлення MariaDB та драйвера PyMySQL
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+
+- name: Запуск MariaDB
+  ansible.builtin.systemd:
+    name: mariadb
+    state: started
+    enabled: true
+
+- name: Налаштування bind-address через шаблон
+  ansible.builtin.template:
+    src: 50-server.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/50-server.cnf
+    mode: "0644"
+  notify: Restart MariaDB
+
+- name: Застосування змін конфігурації MariaDB
+  ansible.builtin.meta: flush_handlers
+
+- name: Створення бази даних
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Створення користувача БД з доступом тільки з worker
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    host: "{{ hostvars['worker']['ansible_default_ipv4']['address'] }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Фаєрвол UFW — дозволити порт 3306 ТІЛЬКИ з IP worker
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ hostvars['worker']['ansible_default_ipv4']['address'] }}"
+    port: "{{ db_port | string }}"
+    proto: tcp

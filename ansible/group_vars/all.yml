@@ -1,0 +1,13 @@
+---
+gradebook_number: "6"
+
+app_host: "127.0.0.1"
+app_port: 5200
+db_port: 3306
+db_name: "mywebapp_db"
+db_user: "mywebapp_user"
+db_password: "MyWebAppPass_Var6!"
+
+app_dir: "/opt/mywebapp"
+ssh_pub_key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+default_users_password_hash: "{{ '12345678' | password_hash('sha512') }}"

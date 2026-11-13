@@ -1,0 +1,87 @@
+---
+- name: Створення системного користувача app
+  ansible.builtin.user:
+    name: app
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ app_dir }}"
+    create_home: false
+    state: present
+
+- name: Створення користувача operator
+  ansible.builtin.user:
+    name: operator
+    password: "{{ default_users_password_hash }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Додавання SSH-ключа для operator
+  ansible.posix.authorized_key:
+    user: operator
+    key: "{{ ssh_pub_key }}"
+    state: present
+
+- name: Налаштування sudoers для operator
+  ansible.builtin.template:
+    src: sudoers-operator.j2
+    dest: /etc/sudoers.d/operator
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: Встановлення python3-venv
+  ansible.builtin.apt:
+    name:
+      - python3-venv
+    state: present
+
+- name: Створення директорії /opt/mywebapp
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: app
+    group: app
+    mode: "0755"
+
+- name: Копіювання коду застосунку на worker
+  ansible.builtin.copy:
+    src: "../../app/"
+    dest: "{{ app_dir }}/"
+    owner: app
+    group: app
+    mode: "0644"
+  notify: Restart mywebapp
+
+- name: Встановлення залежностей Python у virtualenv
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_command: python3 -m venv
+  become_user: app
+
+- name: Генерація файлу середовища з паролем БД
+  ansible.builtin.template:
+    src: mywebapp.env.j2
+    dest: "{{ app_dir }}/mywebapp.env"
+    owner: app
+    group: app
+    mode: "0600"
+  notify: Restart mywebapp
+
+- name: Генерація systemd unit-файлу mywebapp.service
+  ansible.builtin.template:
+    src: mywebapp.service.j2
+    dest: /etc/systemd/system/mywebapp.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart mywebapp
+
+- name: Запуск та автозавантаження mywebapp
+  ansible.builtin.systemd:
+    name: mywebapp
+    state: started
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,30 @@
+[Unit]
+Description=MyWebApp Service (Lab 4 - Variant 6)
+After=network.target
+
+[Service]
+Type=simple
+User=app
+Group=app
+WorkingDirectory={{ app_dir }}
+EnvironmentFile={{ app_dir }}/mywebapp.env
+
+ExecStartPre={{ app_dir }}/venv/bin/python {{ app_dir }}/migrate.py \
+  --db-host {{ hostvars['db']['ansible_default_ipv4']['address'] }} \
+  --db-port {{ db_port }} \
+  --db-user {{ db_user }} \
+  --db-name {{ db_name }}
+
+ExecStart={{ app_dir }}/venv/bin/python {{ app_dir }}/server.py \
+  --host {{ app_host }} \
+  --port {{ app_port }} \
+  --db-host {{ hostvars['db']['ansible_default_ipv4']['address'] }} \
+  --db-port {{ db_port }} \
+  --db-user {{ db_user }} \
+  --db-name {{ db_name }}
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

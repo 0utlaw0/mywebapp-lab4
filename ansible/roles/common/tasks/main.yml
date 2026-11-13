@@ -1,0 +1,52 @@
+---
+- name: Оновлення кешу apt
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Встановлення базових пакетів
+  ansible.builtin.apt:
+    name:
+      - ufw
+      - python3-pip
+      - acl
+    state: present
+
+- name: Створення користувача teacher
+  ansible.builtin.user:
+    name: teacher
+    password: "{{ default_users_password_hash }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Додавання SSH-ключа для teacher
+  ansible.posix.authorized_key:
+    user: teacher
+    key: "{{ ssh_pub_key }}"
+    state: present
+
+- name: Створення директорії /home/student
+  ansible.builtin.file:
+    path: /home/student
+    state: directory
+    mode: "0755"
+
+- name: Запис номера варіанта у /home/student/gradebook
+  ansible.builtin.copy:
+    content: "{{ gradebook_number }}\n"
+    dest: /home/student/gradebook
+    mode: "0644"
+
+- name: Дозвіл SSH у UFW
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Увімкнення UFW (заблоковано все, крім дозволеного)
+  community.general.ufw:
+    state: enabled
+    policy: deny

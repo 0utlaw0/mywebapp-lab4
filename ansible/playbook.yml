@@ -1,0 +1,19 @@
+---
+- name: Базове налаштування всіх ВМ
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: Розгортання MariaDB на VM2 (db)
+  hosts: db
+  become: true
+  roles:
+    - db
+
+- name: Розгортання веб-застосунку та Nginx на VM1 (worker)
+  hosts: workers
+  become: true
+  roles:
+    - webapp
+    - nginx
