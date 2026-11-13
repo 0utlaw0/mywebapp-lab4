@@ -47,7 +47,7 @@
 
 - name: Копіювання коду застосунку на worker
   ansible.builtin.copy:
-    src: "../../app/"
+    src: "{{ playbook_dir }}/../app/"
     dest: "{{ app_dir }}/"
     owner: app
     group: app
